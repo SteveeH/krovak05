@@ -5,19 +5,21 @@ and heights to Bpv system (Baltic vertical datum After Adjustment).
 
 ## Installation
 
-<code> 
-pip -m install krovak05 
-</code>
+Run the following to install:
 
-## Example of use:
+```python
+pip install krovak05 
+```
 
-<code> 
+## Usage
+
+```python
 krovak = Krovak05()
 
 output = krovak.etrs_jtsk(50.000,15.000,100)
 
 --> (703011.898, 1058147.296, 55.562)
 
-</code>
+```
 
 [Repository](https://github.com/SteveeH/krovak05)

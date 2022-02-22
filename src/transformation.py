@@ -50,6 +50,24 @@ class Krovak05:
 
         print(self._diff_table_path)
 
+    def get_available_diff_tables(self):
+        """Return available differential tables
+
+        Usage for measuring:
+
+        table_yx_3_v1710 - (DEFAULT) obtained by measurement from 1.1.2018
+
+        table_yx_3_v1202 - obtained by measurement between 1.7.2012-30.6.2018
+
+        table_yx_3_v1005 - obtained by measurement between 2.1.2011-31.12.2012
+
+
+        Returns:
+            (list): list of differential table names 
+        """
+
+        return self.POSSIBLE_DIFF_TABLE_NAMES
+
     def interpolate_dydx(self, Y, X):
         """Interpolation of difference values dy,dx from difference table grid for conversion
         from S-JTSK/05 to S-JTSK coordinate system.
