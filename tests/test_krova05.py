@@ -3,9 +3,9 @@ import pytest
 
 sys.path.insert(0, '../src/')
 
-from transformation import Krovak05
+import krovak05
 
-krovak = Krovak05()
+krovak = krovak05.Transformation()
 
 
 @pytest.mark.parametrize("B,L,expected_result", [

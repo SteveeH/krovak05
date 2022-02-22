@@ -20,7 +20,7 @@ def read_specific_line(file_path, lines_idx: list):
     return output_lines
 
 
-class Krovak05:
+class Transformation:
 
     POSSIBLE_DIFF_TABLE_NAMES = ["table_yx_3_v1710",
                                  "table_yx_3_v1202", "table_yx_3_v1005"]
@@ -396,9 +396,27 @@ class Krovak05:
 
 if __name__ == "__main__":
 
-    k = Krovak05()
+    krovak = Transformation()
 
-    print(k.interpolate_undulation(50, 15))
-    print(k.interpolate_dydx(750000, 1050000))
-    print(k.etrs_jtsk05(50, 15, 100))
-    print(k.etrs_jtsk(50, 15, 100))
+
+
+    # Undulation of kvasigeoid
+    undulation = krovak.interpolate_undulation(50, 15)
+    print(undulation)
+
+    # Differences between S-JTSK and S-JTSK/05
+    dy, dx = krovak.interpolate_dydx(750000, 1050000)
+    print(dy, dx)
+
+    # Get list of possible dydx grid data
+    grids = krovak.get_available_diff_tables()
+    print(grids)
+
+    # Transform ETRS89 (ETRF2000) coordinates to S-JTSK/05
+    Y_sjtsk05, X_sjtsk05, H_bpv = krovak.etrs_jtsk05(50, 15, 100)
+    print(Y_sjtsk05, X_sjtsk05, H_bpv)
+
+    # Transform ETRS89 (ETRF2000) coordinates to S-JTSK
+    Y_sjtsk, X_sjtsk, H_bpv = krovak.etrs_jtsk(50, 15, 100)
+    print(Y_sjtsk, X_sjtsk, H_bpv)
+    
