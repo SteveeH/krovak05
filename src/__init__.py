@@ -1,1 +1,1 @@
-from .transformation import Krovak05
+from .krovak05 import Transformation

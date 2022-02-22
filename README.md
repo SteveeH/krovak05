@@ -31,8 +31,9 @@ jtsk_etrs(self,Y,X,H) -> raise Exception (!!Not Implemented yet!!)
 ## Usage
 
 ```python
+import krovak05
 
-krovak = Transformation()
+krovak = krovak05.Transformation()
 
 ## Undulation of kvasigeoid
 undulation = krovak.interpolate_undulation(50, 15)
@@ -63,7 +64,7 @@ print(Y_sjtsk, X_sjtsk, H_bpv)
 ### Set different grid table:
 
 ```python
-krovak = Transformation("table_yx_3_v1005")
+krovak = krovak05.Transformation("table_yx_3_v1005")
 ```
 
 # TODO
@@ -71,7 +72,7 @@ krovak = Transformation("table_yx_3_v1005")
 - Code reverse transformation from S-JTSK to ETRS89
 
 # Data validation
-validation of data accuracy was performed using of the [ČUZK transformation service](https://geoportal.cuzk.cz/(S(idlg1tno0nodmoby14poaa1d))/Default.aspx?mode=TextMeta&text=wcts&menu=19)
+validation of data accuracy was performed using of the [CUZK transformation service](https://geoportal.cuzk.cz/(S(idlg1tno0nodmoby14poaa1d))/Default.aspx?mode=TextMeta&text=wcts&menu=19)
 
 
 ---

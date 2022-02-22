@@ -1,3 +1,7 @@
+include src/difference_tables/table_yx_3_v1710.csv
+include src/difference_tables/table_yx_3_v1202.csv
+include src/difference_tables/table_yx_3_v1005.csv
+include src/kvazigeoids/CR-2005_v1005.csv
 recursive-include src *.csv
 recursive-include src *.py
 recursive-include tests *.py

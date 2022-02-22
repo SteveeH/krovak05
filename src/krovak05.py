@@ -28,7 +28,7 @@ class Transformation:
     def __init__(self, diff_table_name: str = "table_yx_3_v1710"):
 
         self.diff_table_name = diff_table_name
-        self._heigh_table_path = os.path.join(
+        self._heigh_table_path = os.path.join(os.path.dirname(__file__),
             "kvazigeoids", "CR-2005_v1005.csv")
 
     @property
@@ -45,7 +45,7 @@ class Transformation:
                 "DIFF table named {} doesn't exist. Default value was set!".format(name))
             self._diff_table_name = self.POSSIBLE_DIFF_TABLE_NAMES[0]
 
-        self._diff_table_path = os.path.join(
+        self._diff_table_path = os.path.join(os.path.dirname(__file__),
             "difference_tables", self._diff_table_name + ".csv")
 
         print(self._diff_table_path)

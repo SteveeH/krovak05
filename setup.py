@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup,find_packages
 
 
 with open("README.md","r") as f:
@@ -7,12 +7,13 @@ with open("README.md","r") as f:
 
 setup(
     name="krovak05",
-    version="0.0.2",
+    version="0.0.8",
     author="SteveH",
     author_email="steveeh07@gmail.com",
     description="geodetic package for transformation ETRS coordinates to S-JTSK",
-    py_modules=["transformation"],
-    package_dir={"": "src"},
+    package_dir={"krovak05": "src"},
+    packages=["krovak05","krovak05.difference_tables","krovak05.kvazigeoids"],
+    include_package_data=True,
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
