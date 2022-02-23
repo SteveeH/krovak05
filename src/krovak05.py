@@ -29,7 +29,7 @@ class Transformation:
 
         self.diff_table_name = diff_table_name
         self._heigh_table_path = os.path.join(os.path.dirname(__file__),
-            "kvazigeoids", "CR-2005_v1005.csv")
+                                              "kvazigeoids", "CR-2005_v1005.csv")
 
     @property
     def diff_table_name(self):
@@ -46,7 +46,7 @@ class Transformation:
             self._diff_table_name = self.POSSIBLE_DIFF_TABLE_NAMES[0]
 
         self._diff_table_path = os.path.join(os.path.dirname(__file__),
-            "difference_tables", self._diff_table_name + ".csv")
+                                             "difference_tables", self._diff_table_name + ".csv")
 
         print(self._diff_table_path)
 
@@ -360,7 +360,7 @@ class Transformation:
         return Y_ - dy, X_ - dx
 
     def etrs_jtsk(self, B, L, H):
-        """Transformation sferic coordinates B, L, H ETRS89 (ETRF200) to S-JTSK coordinates system 
+        """Transformation sferic coordinates B, L, H ETRS89 (ETRF2000) to S-JTSK coordinates system 
 
         Args:
             B (float): ETRS89 latitude [deg]
@@ -380,7 +380,9 @@ class Transformation:
         return Y_jtsk, X_jtsk, H_bpv
 
     def jtsk_etrs(self, Y, X, H):
-        """!! Not implemented !!
+        """Transformation S-JTSK coordinates to sferic coordinates B, L, H ETRS89 (ETRF2000)
+
+        **reverse transformation to Transformation.etrs_jtsk**
 
         Args:
             Y (float): Y S-JTSK [m]
@@ -388,17 +390,131 @@ class Transformation:
             H (float): height Bpv [m]
 
         Returns:
-            Raise Exception
+            B (float): ETRS89 latitude [deg]
+            L (float): ETRS89 longitude [deg]
+            H (float): Elipsoidal height [m]
         """
 
-        raise "This reverse transformation isn't implemented yet"
+        A_GRS80 = 6378137
+        E2_GRS80 = 0.006694380022901
+
+        A_BESSEL = 6377397.155
+        E2_BESSEL = 0.00667437223062
+        E_BESSEL = math.sqrt(E2_BESSEL)
+
+        RHO = math.pi / 180
+        S_0 = 78.50 * RHO
+        Fi_0 = 49.50 * RHO
+        n = math.sin(S_0)
+
+        N_0 = (A_BESSEL * math.sqrt(1 - E2_BESSEL)) / \
+            (1 - E2_BESSEL * math.sin(Fi_0)**2)
+        Ro0 = 0.9999 * N_0 * (1 / math.tan(S_0))
+
+        a_ = (90 - (59 + 42 / 60 + 42.69689 / 3600)) * RHO
+        alfa = math.sqrt(
+            1 + ((E2_BESSEL * (math.cos(Fi_0)**4)) / (1 - E2_BESSEL)))
+        U_0 = math.asin(math.sin(Fi_0) / alfa)
+        k_ = math.tan(U_0 / 2 + math.pi / 4) * ((1 / math.tan(Fi_0 / 2 + math.pi / 4))**alfa) * \
+            (((1 + E_BESSEL * math.sin(Fi_0)) /
+              (1 - E_BESSEL * math.sin(Fi_0)))**(alfa * E_BESSEL / 2))
+
+        # Re-introduction of S-JTSK05->S-JTSK corrections
+        dY, dX = self.interpolate_dydx(Y, X)
+
+        Y05 = Y + dY
+        X05 = X + dX
+
+        # Re-introduction of bicubic dotransformation
+        dYb, dXb = self.bicub_dotr(Y05, X05)
+
+        Y_ = Y05 + dYb
+        X_ = X05 + dXb
+
+        # Conversion from plane to cone shell
+        Ro = math.sqrt(X_**2 + Y_**2)
+        Epsilon = math.atan(Y_ / X_)
+
+        # Conversion from a cone shell to a sphere (cartographic coordinates) -> S,D
+
+        D = Epsilon / math.sin(S_0)
+        S = 2 * (math.atan(((Ro0 / Ro)**(1 / n)) *
+                           math.tan(S_0 / 2 + math.pi / 4)) - math.pi / 4)
+
+        # Cartographic coordinates -> geographical coordinates -> U,V
+
+        U = math.asin(math.cos(a_) * math.sin(S) -
+                      math.sin(a_) * math.cos(S) * math.cos(D))
+        dV = math.asin((math.cos(S) * math.sin(D)) / math.cos(U))
+
+        # Sphere to Besseluv elipsoid -> B_bessel, L_Bessel
+
+        L_bessel = (24 + 50 / 60) * RHO - dV / alfa
+
+        B_0 = 0
+        B_i = U
+
+        counter = 0
+
+        while abs(B_0 - B_i) > 1e-15:
+            counter += 1
+            B_0 = B_i
+            B_i = 2 * (math.atan((k_**(-1 / alfa)) * (math.tan(U / 2 + math.pi / 4)**(1 / alfa)) *
+                                 (((1 + E_BESSEL * math.sin(B_0)) / (1 - E_BESSEL * math.sin(B_0)))**(E_BESSEL / 2))) - math.pi / 4)
+
+        B_bessel = B_i
+
+        # Conversion to rectangular coordinates
+
+        HH = H + self.interpolate_undulation(B_bessel / RHO, L_bessel / RHO)
+
+        NN = A_BESSEL / math.sqrt(1 - E2_BESSEL * math.sin(B_bessel)**2)
+
+        X_bessel = (NN + HH) * math.cos(B_bessel) * math.cos(L_bessel)
+        Y_bessel = (NN + HH) * math.cos(B_bessel) * math.sin(L_bessel)
+        Z_bessel = (NN * (1 - E2_BESSEL) + HH) * math.sin(B_bessel)
+
+        # Conversion to elipsoid GRS80 - helmertov transformation
+        # parameters:
+        r_ = 206264.806
+        pp1 = 572.213
+        pp2 = 85.334
+        pp3 = 461.940
+        pp4 = 1 + 3.5378 * 1e-6
+        pp5 = -5.24836073 / r_
+        pp6 = -1.52899176 / r_
+        pp7 = -4.97316164 / r_
+
+        X_grs = pp1 + pp4 * (X_bessel + pp5 * Y_bessel - pp6 * Z_bessel)
+        Y_grs = pp2 + pp4 * (-pp5 * X_bessel + Y_bessel + pp7 * Z_bessel)
+        Z_grs = pp3 + pp4 * (pp6 * X_bessel - pp7 * Y_bessel + Z_bessel)
+
+        # Conversion to geographical coordinates
+
+        grs_dist = math.sqrt(X_grs**2 + Y_grs**2)
+        B_grs_0 = 1
+        B_grs_i = math.atan((Z_grs / grs_dist) *
+                            (1 + E2_GRS80 / (1 - E2_GRS80)))
+
+        while (B_grs_0 - B_grs_i) > 1e-15:
+
+            B_grs_0 = B_grs_i
+
+            NN_i = A_GRS80 / math.sqrt(1 - E2_GRS80 * math.sin(B_grs_0)**2)
+            HH_e = grs_dist / math.cos(B_grs_0) - NN_i
+            B_grs_i = math.atan((Z_grs / grs_dist) *
+                                ((1 - (NN_i * E2_GRS80) / (NN_i + HH_e))**(-1)))
+
+        B_grs = B_grs_i / RHO
+        L_grs = math.atan(Y_grs / X_grs) / RHO
+        H_grs = H + self.interpolate_undulation(B_grs, L_grs)
+
+        return B_grs, L_grs, H_grs
 
 
 if __name__ == "__main__":
 
     krovak = Transformation()
-
-
 
     # Undulation of kvasigeoid
     undulation = krovak.interpolate_undulation(50, 15)
@@ -413,10 +529,24 @@ if __name__ == "__main__":
     print(grids)
 
     # Transform ETRS89 (ETRF2000) coordinates to S-JTSK/05
-    Y_sjtsk05, X_sjtsk05, H_bpv = krovak.etrs_jtsk05(50, 15, 100)
+    B_etrs_in = 50
+    L_etrs_in = 15
+    H_etrs_in = 100
+
+    Y_sjtsk05, X_sjtsk05, H_bpv = krovak.etrs_jtsk05(
+        B_etrs_in, L_etrs_in, H_etrs_in)
     print(Y_sjtsk05, X_sjtsk05, H_bpv)
 
     # Transform ETRS89 (ETRF2000) coordinates to S-JTSK
-    Y_sjtsk, X_sjtsk, H_bpv = krovak.etrs_jtsk(50, 15, 100)
+    Y_sjtsk, X_sjtsk, H_bpv = krovak.etrs_jtsk(B_etrs_in, L_etrs_in, H_etrs_in)
     print(Y_sjtsk, X_sjtsk, H_bpv)
-    
+
+    # Reverse transformation S-JTSK coordinate to ETRS89
+    B_etrs_out, L_etrs_out, H_etrs_out = krovak.jtsk_etrs(
+        Y_sjtsk, X_sjtsk, H_bpv)
+    print(B_etrs_out, L_etrs_out, H_etrs_out)
+
+    print("Differences:")
+    print(f"dB = {(B_etrs_in-B_etrs_out)*(math.pi/180)*6378000*1000} mm")
+    print(f"dL = {(B_etrs_in-B_etrs_out)*(math.pi/180)*(6378000*math.cos(B_etrs_in*(math.pi/180)))*1000} mm")
+    print(f"dH = {(H_etrs_in-H_etrs_out)*1000} mm")
