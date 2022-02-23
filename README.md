@@ -26,6 +26,7 @@ pip install krovak05
 ## Usage
 
 ```python
+import math
 import krovak05
 
 krovak = krovak05.Transformation()
