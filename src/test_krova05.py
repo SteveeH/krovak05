@@ -1,7 +1,5 @@
-import sys
 import pytest
-
-sys.path.insert(0, '../src/')
+import math
 
 import krovak05
 
@@ -36,3 +34,20 @@ def test_check_etrs_jtsk05(B, L, H, expected_result):
 def test_check_etrs_jtsk(B, L, H, expected_result):
     assert pytest.approx(krovak.etrs_jtsk(B, L, H),
                          abs=0.002) == expected_result
+
+
+@pytest.mark.parametrize("Y,X,H, expected_result", [
+    (774041.354, 1048448.752, 54.368, (50, 14)),
+    (703011.898, 1058147.296, 55.562, (50, 15)),
+    (695856.537, 1002995.859, 56.254, (50.5, 15)),
+])
+def test_check_jtsk_etrs(Y, X, H, expected_result):
+
+    B, L, _ = krovak.jtsk_etrs(Y, X, H)
+
+    B_1_cm = (0.01 / 6378000) * (180 / math.pi)
+    L_1_cm = (
+        0.01 / (6378000 * math.cos(expected_result[0]))) * (180 / math.pi)
+
+    assert pytest.approx(B, abs=B_1_cm) == expected_result[0]
+    assert pytest.approx(L, abs=L_1_cm) == expected_result[1]
