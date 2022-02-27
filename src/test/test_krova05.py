@@ -1,9 +1,9 @@
 import pytest
 import math
 
-import krovak05
+from ..krovak05 import Transformation
 
-krovak = krovak05.Transformation()
+krovak = Transformation()
 
 
 @pytest.mark.parametrize("B,L,expected_result", [

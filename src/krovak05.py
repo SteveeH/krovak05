@@ -3,6 +3,9 @@ import math
 import linecache
 
 
+RHO = math.pi / 180
+
+
 def read_specific_line(file_path, lines_idx: list):
     """ Selecting specific lines from a file
     Args:
@@ -30,6 +33,103 @@ class Transformation:
         self.diff_table_name = diff_table_name
         self._heigh_table_path = os.path.join(os.path.dirname(__file__),
                                               "kvazigeoids", "CR-2005_v1005.csv")
+
+        self._par = self.get_parameters()
+
+    def get_parameters(self):
+        """ Get precalculated transformation parameters, no need to be calculated for every point. 
+
+        Returns:
+            _par (dict): transformation parameters  
+        """
+
+        A_GRS80 = 6378137
+        E2_GRS80 = 0.006694380022901
+        E_GRS80 = math.sqrt(E2_GRS80)
+
+        A_BESSEL = 6377397.155
+        E2_BESSEL = 0.00667437223062
+        E_BESSEL = math.sqrt(E2_BESSEL)
+
+        k1 = 0.9999
+        F0 = 49.50 * RHO
+        S0 = 78.50 * RHO
+        Uq = (59 + 42 / 60 + 42.69689 / 3600) * RHO
+
+        alfa = math.sqrt(
+            1 + (E2_BESSEL * math.pow(math.cos(F0), 4)) / (1 - E2_BESSEL))
+        U0 = math.asin(math.sin(F0) / alfa)
+        gf0 = ((1 + E_BESSEL * math.sin(F0)) /
+               (1 - E_BESSEL * math.sin(F0))) ** ((alfa * E_BESSEL) / 2)
+        k = math.tan(U0 / 2 + math.pi / 4) * \
+            ((1 / math.tan((F0 / 2 + math.pi / 4)))**alfa) * gf0
+        n = math.sin(S0)
+        N0 = (A_BESSEL * math.sqrt(1 - E2_BESSEL)) / \
+            (1 - E2_BESSEL * math.sin(F0) ** 2)
+        ro0 = k1 * N0 * (1 / math.tan(S0))
+        aa_ = math.pi / 2 - Uq
+
+        # Parameters of Helmert 3D transformation GRS80 --> Bessel
+        # shifts
+        p1 = -572.203
+        p2 = -85.328
+        p3 = -461.934
+        # scale
+        p4 = (1 + (-3.5393 * 1e-6))
+        # rotation angles
+        rRho = 206264.806
+        p5 = 5.24832714 / rRho
+        p6 = 1.52900087 / rRho
+        p7 = 4.97311727 / rRho
+
+        # Parameters of Helmert 3D transformation Bessel --> GRS80
+        # shifts
+        pp1 = 572.213
+        pp2 = 85.334
+        pp3 = 461.940
+        # scale
+        pp4 = 1 + 3.5378 * 1e-6
+        # rotation angles
+        pp5 = -5.24836073 / rRho
+        pp6 = -1.52899176 / rRho
+        pp7 = -4.97316164 / rRho
+
+        parameters_dict = {
+            "A_GRS80": A_GRS80,
+            "E_GRS80": E_GRS80,
+            "E2_GRS80": E2_GRS80,
+            "A_BESSEL": A_BESSEL,
+            "E_BESSEL": E_BESSEL,
+            "E2_BESSEL": E2_BESSEL,
+            "k1": k1,
+            "F0": F0,
+            "S0": S0,
+            "Uq": Uq,
+            "alfa": alfa,
+            "U0": U0,
+            "gf0": gf0,
+            "k": k,
+            "n": n,
+            "N0": N0,
+            "ro0": ro0,
+            "aa_": aa_,
+            "p1": p1,
+            "p2": p2,
+            "p3": p3,
+            "p4": p4,
+            "p5": p5,
+            "p6": p6,
+            "p7": p7,
+            "pp1": pp1,
+            "pp2": pp2,
+            "pp3": pp3,
+            "pp4": pp4,
+            "pp5": pp5,
+            "pp6": pp6,
+            "pp7": pp7,
+        }
+
+        return parameters_dict
 
     @property
     def diff_table_name(self):
@@ -216,51 +316,6 @@ class Transformation:
             X (float): x-coordinate S-JTSK/05 [m]
             Y (float): height Baltic after adjustment [m]
         """
-
-        # Input transformation parameters --->
-        RHO = math.pi / 180
-
-        A_GRS80 = 6378137
-        E2_GRS80 = 0.006694380022901
-        E_GRS80 = math.sqrt(E2_GRS80)
-
-        A_BESSEL = 6377397.155
-        E2_BESSEL = 0.00667437223062
-        E_BESSEL = math.sqrt(E2_BESSEL)
-
-        k1 = 0.9999
-        F0 = 49.50 * RHO
-        S0 = 78.50 * RHO
-        Uq = (59 + 42 / 60 + 42.69689 / 3600) * RHO
-
-        alfa = math.sqrt(
-            1 + (E2_BESSEL * math.pow(math.cos(F0), 4)) / (1 - E2_BESSEL))
-        U0 = math.asin(math.sin(F0) / alfa)
-        gf0 = ((1 + E_BESSEL * math.sin(F0)) /
-               (1 - E_BESSEL * math.sin(F0))) ** ((alfa * E_BESSEL) / 2)
-        k = math.tan(U0 / 2 + math.pi / 4) * \
-            ((1 / math.tan((F0 / 2 + math.pi / 4)))**alfa) * gf0
-        n = math.sin(S0)
-        N0 = (A_BESSEL * math.sqrt(1 - E2_BESSEL)) / \
-            (1 - E2_BESSEL * math.sin(F0) ** 2)
-        ro0 = k1 * N0 * (1 / math.tan(S0))
-        aa_ = math.pi / 2 - Uq
-
-        # <---
-
-        # Parameters of Helmert 3D transformation GRS80 --> Bessel
-        # shifts
-        p1 = -572.203
-        p2 = -85.328
-        p3 = -461.934
-        # scale
-        p4 = (1 + (-3.5393 * 1e-6))
-        # rotation angles
-        rRho = 206264.806
-        p5 = 5.24832714 / rRho
-        p6 = 1.52900087 / rRho
-        p7 = 4.97311727 / rRho
-
         # Calculate Bpv height
         H_bpv = H - self.interpolate_undulation(B, L)
 
@@ -269,50 +324,55 @@ class Transformation:
         L_ = L * RHO
 
         # Conversion of ellipsoidal to rectangular coordinates
-        N_etrs = A_GRS80 / math.sqrt(1 - E2_GRS80 * math.sin(B_)**2)
+        N_etrs = self._par["A_GRS80"] / math.sqrt(1 -
+                                                  self._par["E2_GRS80"] * math.sin(B_)**2)
 
         X_etrs = (N_etrs + H) * math.cos(B_) * math.cos(L_)
         Y_etrs = (N_etrs + H) * math.cos(B_) * math.sin(L_)
-        Z_etrs = (N_etrs * (1 - E2_GRS80) + H) * math.sin(B_)
+        Z_etrs = (N_etrs * (1 - self._par["E2_GRS80"]) + H) * math.sin(B_)
 
         # Helmert transformation from GRS80 ellipsoid -> Bessel ellipsoid
 
-        X1 = p1 + p4 * (X_etrs + p5 * Y_etrs - p6 * Z_etrs)
-        Y1 = p2 + p4 * (-p5 * X_etrs + Y_etrs + p7 * Z_etrs)
-        Z1 = p3 + p4 * (p6 * X_etrs - p7 * Y_etrs + Z_etrs)
+        X1 = self._par["p1"] + self._par["p4"] * (X_etrs +
+                                                  self._par["p5"] * Y_etrs - self._par["p6"] * Z_etrs)
+        Y1 = self._par["p2"] + self._par["p4"] * (-self._par["p5"]
+                                                  * X_etrs + Y_etrs + self._par["p7"] * Z_etrs)
+        Z1 = self._par["p3"] + self._par["p4"] * (self._par["p6"]
+                                                  * X_etrs - self._par["p7"] * Y_etrs + Z_etrs)
 
         # Reverse transfer to ellipsoidal coordinates
         LL = math.atan(Y1 / X1)
         BB_0 = 0
         BB_i = math.atan((Z1 / (math.sqrt(X1**2 + Y1**2))) *
-                         (1 + (E2_BESSEL / (1 - E2_BESSEL))))
+                         (1 + (self._par["E2_BESSEL"] / (1 - self._par["E2_BESSEL"]))))
 
         while abs(BB_0 - BB_i) > 1e-12:
             BB_0 = BB_i
 
-            N_i = A_BESSEL / math.sqrt(1 - E2_BESSEL * math.sin(BB_i)**2)
+            N_i = self._par["A_BESSEL"] / math.sqrt(1 -
+                                                    self._par["E2_BESSEL"] * math.sin(BB_i)**2)
             H_i = (math.sqrt(X1**2 + Y1**2) / math.cos(BB_i)) - N_i
             BB_i = math.atan((Z1 / math.sqrt(X1**2 + Y1**2)) *
-                             (1 - (N_i * E2_BESSEL) / (N_i + H_i))**(-1))
+                             (1 - (N_i * self._par["E2_BESSEL"]) / (N_i + H_i))**(-1))
 
         BB = BB_i
 
         # Modified Krovak projection
-        gB = ((1 + E_BESSEL * math.sin(BB)) /
-              (1 - E_BESSEL * math.sin(BB)))**((alfa * E_BESSEL) / 2)
-        U = 2 * (math.atan(k * (math.tan(BB / 2 + math.pi / 4)**alfa)
+        gB = ((1 + self._par["E_BESSEL"] * math.sin(BB)) /
+              (1 - self._par["E_BESSEL"] * math.sin(BB)))**((self._par["alfa"] * self._par["E_BESSEL"]) / 2)
+        U = 2 * (math.atan(self._par["k"] * (math.tan(BB / 2 + math.pi / 4)**self._par["alfa"])
                            * (gB**(-1))) - math.pi / 4)
-        dV = alfa * ((42.5 * RHO - (LL + (17 + 40 / 60) * RHO)))
+        dV = self._par["alfa"] * ((42.5 * RHO - (LL + (17 + 40 / 60) * RHO)))
 
         # Conversion of geographical coordinates to Cartografical
-        S = math.asin(math.cos(aa_) * math.sin(U) +
-                      math.sin(aa_) * math.cos(U) * math.cos(dV))
+        S = math.asin(math.cos(self._par["aa_"]) * math.sin(U) +
+                      math.sin(self._par["aa_"]) * math.cos(U) * math.cos(dV))
         D = math.asin((math.cos(U) * math.sin(dV)) / math.cos(S))
 
-        Epsilon = n * D
+        Epsilon = self._par["n"] * D
 
-        ro = ro0 * (math.tan(S0 / 2 + math.pi / 4)**n) * \
-            (math.tan(S / 2 + math.pi / 4)**(-n))
+        ro = self._par["ro0"] * (math.tan(self._par["S0"] / 2 + math.pi / 4)**self._par["n"]) * \
+            (math.tan(S / 2 + math.pi / 4)**(-self._par["n"]))
 
         Y_ = ro * math.sin(Epsilon)
         X_ = ro * math.cos(Epsilon)
@@ -394,31 +454,6 @@ class Transformation:
             L (float): ETRS89 longitude [deg]
             H (float): Elipsoidal height [m]
         """
-
-        A_GRS80 = 6378137
-        E2_GRS80 = 0.006694380022901
-
-        A_BESSEL = 6377397.155
-        E2_BESSEL = 0.00667437223062
-        E_BESSEL = math.sqrt(E2_BESSEL)
-
-        RHO = math.pi / 180
-        S_0 = 78.50 * RHO
-        Fi_0 = 49.50 * RHO
-        n = math.sin(S_0)
-
-        N_0 = (A_BESSEL * math.sqrt(1 - E2_BESSEL)) / \
-            (1 - E2_BESSEL * math.sin(Fi_0)**2)
-        Ro0 = 0.9999 * N_0 * (1 / math.tan(S_0))
-
-        a_ = (90 - (59 + 42 / 60 + 42.69689 / 3600)) * RHO
-        alfa = math.sqrt(
-            1 + ((E2_BESSEL * (math.cos(Fi_0)**4)) / (1 - E2_BESSEL)))
-        U_0 = math.asin(math.sin(Fi_0) / alfa)
-        k_ = math.tan(U_0 / 2 + math.pi / 4) * ((1 / math.tan(Fi_0 / 2 + math.pi / 4))**alfa) * \
-            (((1 + E_BESSEL * math.sin(Fi_0)) /
-              (1 - E_BESSEL * math.sin(Fi_0)))**(alfa * E_BESSEL / 2))
-
         # Re-introduction of S-JTSK05->S-JTSK corrections
         dY, dX = self.interpolate_dydx(Y, X)
 
@@ -437,19 +472,19 @@ class Transformation:
 
         # Conversion from a cone shell to a sphere (cartographic coordinates) -> S,D
 
-        D = Epsilon / math.sin(S_0)
-        S = 2 * (math.atan(((Ro0 / Ro)**(1 / n)) *
-                           math.tan(S_0 / 2 + math.pi / 4)) - math.pi / 4)
+        D = Epsilon / math.sin(self._par["S0"])
+        S = 2 * (math.atan(((self._par["ro0"] / Ro)**(1 / self._par["n"])) *
+                           math.tan(self._par["S0"] / 2 + math.pi / 4)) - math.pi / 4)
 
         # Cartographic coordinates -> geographical coordinates -> U,V
 
-        U = math.asin(math.cos(a_) * math.sin(S) -
-                      math.sin(a_) * math.cos(S) * math.cos(D))
+        U = math.asin(math.cos(self._par["aa_"]) * math.sin(S) -
+                      math.sin(self._par["aa_"]) * math.cos(S) * math.cos(D))
         dV = math.asin((math.cos(S) * math.sin(D)) / math.cos(U))
 
         # Sphere to Besseluv elipsoid -> B_bessel, L_Bessel
 
-        L_bessel = (24 + 50 / 60) * RHO - dV / alfa
+        L_bessel = (24 + 50 / 60) * RHO - dV / self._par["alfa"]
 
         B_0 = 0
         B_i = U
@@ -459,8 +494,8 @@ class Transformation:
         while abs(B_0 - B_i) > 1e-15:
             counter += 1
             B_0 = B_i
-            B_i = 2 * (math.atan((k_**(-1 / alfa)) * (math.tan(U / 2 + math.pi / 4)**(1 / alfa)) *
-                                 (((1 + E_BESSEL * math.sin(B_0)) / (1 - E_BESSEL * math.sin(B_0)))**(E_BESSEL / 2))) - math.pi / 4)
+            B_i = 2 * (math.atan((self._par["k"]**(-1 / self._par["alfa"])) * (math.tan(U / 2 + math.pi / 4)**(1 / self._par["alfa"])) *
+                                 (((1 + self._par["E_BESSEL"] * math.sin(B_0)) / (1 - self._par["E_BESSEL"] * math.sin(B_0)))**(self._par["E_BESSEL"] / 2))) - math.pi / 4)
 
         B_bessel = B_i
 
@@ -468,42 +503,39 @@ class Transformation:
 
         HH = H + self.interpolate_undulation(B_bessel / RHO, L_bessel / RHO)
 
-        NN = A_BESSEL / math.sqrt(1 - E2_BESSEL * math.sin(B_bessel)**2)
+        NN = self._par["A_BESSEL"] / math.sqrt(1 -
+                                               self._par["E2_BESSEL"] * math.sin(B_bessel)**2)
 
         X_bessel = (NN + HH) * math.cos(B_bessel) * math.cos(L_bessel)
         Y_bessel = (NN + HH) * math.cos(B_bessel) * math.sin(L_bessel)
-        Z_bessel = (NN * (1 - E2_BESSEL) + HH) * math.sin(B_bessel)
+        Z_bessel = (NN * (1 - self._par["E2_BESSEL"]) + HH) * \
+            math.sin(B_bessel)
 
         # Conversion to elipsoid GRS80 - helmertov transformation
-        # parameters:
-        r_ = 206264.806
-        pp1 = 572.213
-        pp2 = 85.334
-        pp3 = 461.940
-        pp4 = 1 + 3.5378 * 1e-6
-        pp5 = -5.24836073 / r_
-        pp6 = -1.52899176 / r_
-        pp7 = -4.97316164 / r_
 
-        X_grs = pp1 + pp4 * (X_bessel + pp5 * Y_bessel - pp6 * Z_bessel)
-        Y_grs = pp2 + pp4 * (-pp5 * X_bessel + Y_bessel + pp7 * Z_bessel)
-        Z_grs = pp3 + pp4 * (pp6 * X_bessel - pp7 * Y_bessel + Z_bessel)
+        X_grs = self._par["pp1"] + self._par["pp4"] * (X_bessel +
+                                                       self._par["pp5"] * Y_bessel - self._par["pp6"] * Z_bessel)
+        Y_grs = self._par["pp2"] + self._par["pp4"] * (-self._par["pp5"]
+                                                       * X_bessel + Y_bessel + self._par["pp7"] * Z_bessel)
+        Z_grs = self._par["pp3"] + self._par["pp4"] * (self._par["pp6"]
+                                                       * X_bessel - self._par["pp7"] * Y_bessel + Z_bessel)
 
         # Conversion to geographical coordinates
 
         grs_dist = math.sqrt(X_grs**2 + Y_grs**2)
         B_grs_0 = 1
         B_grs_i = math.atan((Z_grs / grs_dist) *
-                            (1 + E2_GRS80 / (1 - E2_GRS80)))
+                            (1 + self._par["E2_GRS80"] / (1 - self._par["E2_GRS80"])))
 
         while (B_grs_0 - B_grs_i) > 1e-15:
 
             B_grs_0 = B_grs_i
 
-            NN_i = A_GRS80 / math.sqrt(1 - E2_GRS80 * math.sin(B_grs_0)**2)
+            NN_i = self._par["A_GRS80"] / math.sqrt(1 -
+                                                    self._par["E2_GRS80"] * math.sin(B_grs_0)**2)
             HH_e = grs_dist / math.cos(B_grs_0) - NN_i
             B_grs_i = math.atan((Z_grs / grs_dist) *
-                                ((1 - (NN_i * E2_GRS80) / (NN_i + HH_e))**(-1)))
+                                ((1 - (NN_i * self._par["E2_GRS80"]) / (NN_i + HH_e))**(-1)))
 
         B_grs = B_grs_i / RHO
         L_grs = math.atan(Y_grs / X_grs) / RHO
