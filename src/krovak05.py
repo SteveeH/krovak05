@@ -214,7 +214,7 @@ class Transformation:
         Returns:
             Y (float): y-coordinate S-JTSK/05 [m]
             X (float): x-coordinate S-JTSK/05 [m]
-            Y (float): height Baltic after adjustment [m]
+            H (float): height Baltic after adjustment [m]
         """
 
         # Input transformation parameters --->
@@ -370,7 +370,7 @@ class Transformation:
         Returns:
             Y (float): y-coordinate S-JTSK [m]
             X (float): x-coordinate S-JTSK [m]
-            Y (float): height Baltic after adjustment [m]
+            H (float): height Baltic after adjustment [m]
         """
 
         Y_jtsk05, X_jtsk05, H_bpv = self.etrs_jtsk05(B, L, H)
